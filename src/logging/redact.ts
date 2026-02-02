@@ -46,6 +46,9 @@ type RedactOptions = {
 };
 
 function normalizeMode(value?: string): RedactSensitiveMode {
+  if (process.env.OPENCLAW_REDACT_FORCE === "1") {
+    return "tools";
+  }
   return value === "off" ? "off" : DEFAULT_REDACT_MODE;
 }
 
