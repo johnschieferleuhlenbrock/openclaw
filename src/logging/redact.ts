@@ -34,7 +34,7 @@ const DEFAULT_REDACT_PATTERNS: string[] = [
   String.raw`\b(npm_[A-Za-z0-9]{10,})\b`,
   String.raw`\b(\d{6,}:[A-Za-z0-9_-]{20,})\b`,
   // AWS SigV4 Authorization header with signature
-  String.raw`Signature=([a-f0-9]{64})`,
+  String.raw`Signature=([a-f0-9]{64,})`,
   // MongoDB URI containing credentials
   String.raw`mongodb\+srv://([^@\s]+)@`,
   String.raw`mongodb://([^@\s]+)@`,
