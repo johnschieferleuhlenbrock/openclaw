@@ -83,6 +83,20 @@ describe("redactSensitiveText", () => {
     expect(output).toBe("token=abcdef…ghij");
   });
 
+  it("masks AWS SigV4 signatures", () => {
+    const input =
+      "Authorization: AWS4-HMAC-SHA256 Credential=AKIA.../20231010/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f4f8f";
+    const output = redactSensitiveText(input, { mode: "tools", patterns: defaults });
+    expect(output).toContain("Signature=4f8f4f…4f8f");
+  });
+
+  it("masks mongodb connection strings with credentials", () => {
+    const input = "mongodb+srv://user:pass@cluster0.example.mongodb.net/db";
+    const output = redactSensitiveText(input, { mode: "tools", patterns: defaults });
+    expect(output).toBe("mongodb+srv://***@cluster0.example.mongodb.net/db");
+    expect(output).not.toContain("user:pass");
+  });
+
   it("skips redaction when mode is off", () => {
     const input = "OPENAI_API_KEY=sk-1234567890abcdef";
     const output = redactSensitiveText(input, {

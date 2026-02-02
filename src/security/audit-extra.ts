@@ -143,6 +143,45 @@ function looksLikeEnvRef(value: string): boolean {
 
 export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
+  const handledPaths = new Set<string>();
+
+  const sensitiveKeyPattern =
+    /\b(token|apiKey|password|passwd|secret|credentials|authToken|authKey|authSecret)\b/i;
+
+  const visit = (value: unknown, path: (string | number)[]) => {
+    const pathKey = path.join(".");
+    if (handledPaths.has(pathKey)) return;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (
+        trimmed &&
+        !looksLikeEnvRef(trimmed) &&
+        sensitiveKeyPattern.test(String(path.at(-1)))
+      ) {
+        findings.push({
+          checkId: "config.secrets.plaintext",
+          severity: "warn",
+          title: "Secret-like field stored in config",
+          detail: `${path.join(".")} is set directly in the config; prefer environment variables or external secret stores.`,
+          remediation: `Move ${path.join(".")} to an environment variable and remove it from the config file.`,
+        });
+        handledPaths.add(pathKey);
+      }
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((entry, idx) => visit(entry, [...path, idx]));
+      return;
+    }
+    if (value && typeof value === "object") {
+      for (const [k, v] of Object.entries(value)) {
+        visit(v, [...path, k]);
+      }
+    }
+  };
+
+  visit(cfg, []);
+
   const password =
     typeof cfg.gateway?.auth?.password === "string" ? cfg.gateway.auth.password.trim() : "";
   if (password && !looksLikeEnvRef(password)) {
@@ -155,6 +194,7 @@ export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAud
       remediation:
         "Prefer OPENCLAW_GATEWAY_PASSWORD (env) and remove gateway.auth.password from disk.",
     });
+    handledPaths.add("gateway.auth.password");
   }
 
   const hooksToken = typeof cfg.hooks?.token === "string" ? cfg.hooks.token.trim() : "";
@@ -166,6 +206,7 @@ export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAud
       detail:
         "hooks.token is set in the config file; keep config perms tight and treat it like an API secret.",
     });
+    handledPaths.add("hooks.token");
   }
 
   return findings;

@@ -121,6 +121,25 @@ describe("security audit", () => {
     );
   });
 
+  it("flags generic secret-like fields stored directly in config", async () => {
+    const cfg: OpenClawConfig = {
+      gateway: { auth: { token: "plaintext-token" } },
+      channels: { telegram: { token: "123:abc" } },
+      plugins: { entries: { db: { password: "p@ssw0rd" } } },
+    };
+
+    const res = await runSecurityAudit({
+      config: cfg,
+      includeFilesystem: false,
+      includeChannelSecurity: false,
+    });
+
+    expect(
+      res.findings.filter((f) => f.checkId === "config.secrets.plaintext" && f.severity === "warn")
+        .length,
+    ).toBeGreaterThanOrEqual(3);
+  });
+
   it("treats Windows ACL-only perms as secure", async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-security-audit-win-"));
     const stateDir = path.join(tmp, "state");

@@ -198,4 +198,15 @@ Notes:
 - `token` is stored in localStorage; `password` is kept in memory only.
 - Use `wss://` when the Gateway is behind TLS (Tailscale Serve, HTTPS proxy, etc.).
 
+> Security note: the Control UI keeps tokens in browser `localStorage` for convenience. Protect the hosting origin against XSS; if you prefer auto-clear on close, use a private/incognito window or clear site data after use.
+
+### Additional data-safety tips
+
+- Prefer **token auth** over passwords, and rotate tokens regularly (`openclaw devices revoke --device <id>` to invalidate).
+- Use **HTTPS/Tailscale Serve** so tokens never traverse plaintext HTTP.
+- Limit the browser surface: use a dedicated browser profile for Control UI and clear storage after sessions when using shared machines.
+- Keep **logging redaction enabled** (default) to prevent secrets from landing in logs; avoid setting `logging.redactSensitive: "off"`.
+- For team access, create per-user tokens/roles instead of sharing one token; revoke tokens promptly when devices are lost.
+- To **force redaction even if config disables it**, set `OPENCLAW_REDACT_FORCE=1` in the environment before starting the Gateway. This guarantees masking of tokens/keys in logs and tool output.
+
 Remote access setup details: [Remote access](/gateway/remote).
