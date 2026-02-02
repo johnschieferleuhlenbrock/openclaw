@@ -146,7 +146,7 @@ export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAud
   const handledPaths = new Set<string>();
 
   const sensitiveKeyPattern =
-    /\b(token|apiKey|password|passwd|secret|credentials|auth|authToken|authKey)\b/i;
+    /\b(token|apiKey|password|passwd|secret|credentials|authToken|authKey|authSecret)\b/i;
 
   const visit = (value: unknown, path: (string | number)[]) => {
     const pathKey = path.join(".");
