@@ -143,6 +143,42 @@ function looksLikeEnvRef(value: string): boolean {
 
 export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
+
+  const sensitiveKeyPattern = /(?:token|apikey|password|passwd|secret|credentials|auth)/i;
+  const skipPaths = new Set(["gateway.auth.password", "hooks.token"]);
+
+  const visit = (value: unknown, path: (string | number)[]) => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (
+        trimmed &&
+        !looksLikeEnvRef(trimmed) &&
+        sensitiveKeyPattern.test(String(path.at(-1))) &&
+        !skipPaths.has(path.join("."))
+      ) {
+        findings.push({
+          checkId: "config.secrets.plaintext",
+          severity: "warn",
+          title: "Secret-like field stored in config",
+          detail: `${path.join(".")} is set directly in the config; prefer environment variables or external secret stores.`,
+          remediation: `Move ${path.join(".")} to an environment variable and remove it from the config file.`,
+        });
+      }
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((entry, idx) => visit(entry, [...path, idx]));
+      return;
+    }
+    if (value && typeof value === "object") {
+      for (const [k, v] of Object.entries(value)) {
+        visit(v, [...path, k]);
+      }
+    }
+  };
+
+  visit(cfg, []);
+
   const password =
     typeof cfg.gateway?.auth?.password === "string" ? cfg.gateway.auth.password.trim() : "";
   if (password && !looksLikeEnvRef(password)) {

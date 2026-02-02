@@ -198,4 +198,6 @@ Notes:
 - `token` is stored in localStorage; `password` is kept in memory only.
 - Use `wss://` when the Gateway is behind TLS (Tailscale Serve, HTTPS proxy, etc.).
 
+> Security note: the Control UI keeps tokens in browser `localStorage` for convenience. Protect the hosting origin against XSS; if you prefer auto-clear on close, use a private/incognito window or clear site data after use.
+
 Remote access setup details: [Remote access](/gateway/remote).
