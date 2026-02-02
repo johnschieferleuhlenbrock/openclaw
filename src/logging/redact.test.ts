@@ -94,6 +94,7 @@ describe("redactSensitiveText", () => {
     const input = "mongodb+srv://user:pass@cluster0.example.mongodb.net/db";
     const output = redactSensitiveText(input, { mode: "tools", patterns: defaults });
     expect(output).toBe("mongodb+srv://***@cluster0.example.mongodb.net/db");
+    expect(output).not.toContain("user:pass");
   });
 
   it("skips redaction when mode is off", () => {

@@ -143,18 +143,19 @@ function looksLikeEnvRef(value: string): boolean {
 
 export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
+  const handledPaths = new Set<string>();
 
-  const sensitiveKeyPattern = /(?:token|apikey|password|passwd|secret|credentials|auth)/i;
-  const skipPaths = new Set(["gateway.auth.password", "hooks.token"]);
+  const sensitiveKeyPattern = /\b(token|apiKey|password|passwd|secret|credentials|authToken|authKey)\b/i;
 
   const visit = (value: unknown, path: (string | number)[]) => {
+    const pathKey = path.join(".");
+    if (handledPaths.has(pathKey)) return;
     if (typeof value === "string") {
       const trimmed = value.trim();
       if (
         trimmed &&
         !looksLikeEnvRef(trimmed) &&
-        sensitiveKeyPattern.test(String(path.at(-1))) &&
-        !skipPaths.has(path.join("."))
+        sensitiveKeyPattern.test(String(path.at(-1)))
       ) {
         findings.push({
           checkId: "config.secrets.plaintext",
@@ -163,6 +164,7 @@ export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAud
           detail: `${path.join(".")} is set directly in the config; prefer environment variables or external secret stores.`,
           remediation: `Move ${path.join(".")} to an environment variable and remove it from the config file.`,
         });
+        handledPaths.add(pathKey);
       }
       return;
     }
@@ -191,6 +193,7 @@ export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAud
       remediation:
         "Prefer OPENCLAW_GATEWAY_PASSWORD (env) and remove gateway.auth.password from disk.",
     });
+    handledPaths.add("gateway.auth.password");
   }
 
   const hooksToken = typeof cfg.hooks?.token === "string" ? cfg.hooks.token.trim() : "";
@@ -202,6 +205,7 @@ export function collectSecretsInConfigFindings(cfg: OpenClawConfig): SecurityAud
       detail:
         "hooks.token is set in the config file; keep config perms tight and treat it like an API secret.",
     });
+    handledPaths.add("hooks.token");
   }
 
   return findings;
